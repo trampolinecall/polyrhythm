@@ -136,18 +136,10 @@ impl RhythmSegment {
         }
     }
 
-    fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration {
         match self {
             RhythmSegment::Note(n) => n.duration.to_duration(),
             RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
-        }
-    }
-
-    // TODO: remove this and do this better
-    pub(crate) fn note_durations(&self) -> Vec<Duration> {
-        match self {
-            RhythmSegment::Note(n) => vec![n.duration.to_duration()],
-            RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => rhythm.note_durations().iter().map(|dur| *dur * Ratio::new(*normal, *actual)).collect(),
         }
     }
 }
@@ -155,9 +147,5 @@ impl RhythmSegment {
 impl Rhythm {
     fn duration(&self) -> Duration {
         self.segments.iter().map(|s| s.duration()).sum()
-    }
-    // TODO: remove this and do this better
-    pub(crate) fn note_durations(&self) -> Vec<Duration> {
-        self.segments.iter().flat_map(|s| s.note_durations()).collect()
     }
 }

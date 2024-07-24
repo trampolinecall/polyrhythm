@@ -3,7 +3,15 @@ use num_traits::cast::ToPrimitive;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
-use crate::polyrhythm::Polyrhythm;
+use crate::{
+    polyrhythm::Polyrhythm,
+    rhythm::{NoteDuration, Rhythm},
+};
+
+// TODO: do this better (scale so that the shortest note is a comfortable distance from the next?)
+const WHOLE_NOTE_SIZE: f64 = 500.0;
+// TODO: decide on a better value for this (make this vary between each rhythm based on the highest number of flags on the shortest note?)
+const RHYTHM_HEIGHT: f64 = 100.0;
 
 pub fn draw(canvas: &HtmlCanvasElement, polyrhythm: &Polyrhythm) {
     let ctx: CanvasRenderingContext2d = canvas.get_context("2d").expect("could not get canvas context").unwrap().dyn_into().expect("2d canvas context should be CanvasRenderingContext2d");
@@ -13,34 +21,54 @@ pub fn draw(canvas: &HtmlCanvasElement, polyrhythm: &Polyrhythm) {
     canvas.set_height(500);
     ctx.clear_rect(0.0, 0.0, 1000.0, 500.0);
 
-    const WHOLE_NOTE_SIZE: f64 = 400.0;
     for (i, rhythm) in polyrhythm.rhythms.iter().enumerate() {
-        let y = (i * 100 + 50) as f64;
+        let y = (i as f64) * RHYTHM_HEIGHT + RHYTHM_HEIGHT / 2.0;
         ctx.begin_path();
         ctx.move_to(0.0, y);
         ctx.line_to(1000.0, y);
         ctx.set_stroke_style(&"black".into());
         ctx.stroke();
 
-        let mut x: Ratio<u32> = Ratio::ZERO;
-        for duration in rhythm.note_durations() {
-            ctx.begin_path();
-            ctx.arc(x.to_f64().unwrap() * WHOLE_NOTE_SIZE, y, 10.0, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.set_fill_style(&"black".into());
-            ctx.fill();
-            ctx.begin_path();
-            ctx.arc(x.to_f64().unwrap() * WHOLE_NOTE_SIZE, y, 10.0, 0.0, std::f64::consts::TAU).unwrap();
-            ctx.set_fill_style(&"black".into());
-            ctx.stroke();
-            ctx.begin_path();
-            ctx.move_to(x.to_f64().unwrap() * WHOLE_NOTE_SIZE, y - 100.0);
-            ctx.move_to(x.to_f64().unwrap() * WHOLE_NOTE_SIZE, y + 100.0);
-            ctx.set_fill_style(&"black".into());
-            ctx.stroke();
-            web_sys::console::log_1(&"efjaowie".into());
-            web_sys::console::log_4(&(x.to_f64().unwrap() * WHOLE_NOTE_SIZE).into(), &y.into(), &0.0.into(), &std::f64::consts::TAU.into());
-
-            x += duration.to_ratio();
+        for note in flatten_rhythm(rhythm) {
+            let x = note.time.to_f64().unwrap() * WHOLE_NOTE_SIZE;
+            draw_notehead(&ctx, note.duration, x, y);
         }
     }
+}
+
+fn draw_notehead(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: f64, y: f64) {
+    // TODO: modify this based on the note duration
+    ctx.begin_path();
+    ctx.arc(x, y, 10.0, 0.0, std::f64::consts::TAU).unwrap();
+    ctx.set_fill_style(&"black".into());
+    ctx.fill();
+}
+
+struct FlattenedNote {
+    time: Ratio<u32>,
+    duration: NoteDuration,
+}
+fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
+    let mut current_time = Ratio::ZERO;
+
+    let mut notes = Vec::new();
+
+    for segment in &r.segments {
+        match segment {
+            crate::rhythm::RhythmSegment::Note(n) => {
+                notes.push(FlattenedNote { time: current_time, duration: n.duration });
+                current_time += segment.duration().to_ratio();
+            }
+            crate::rhythm::RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => {
+                let flattened_tuplet_subrhythm = flatten_rhythm(rhythm);
+                let flattened_tuplet_subrhythm_scaled = flattened_tuplet_subrhythm.into_iter().map(|note| FlattenedNote { time: note.time * Ratio::new(*normal, *actual), ..note });
+                for flattened_subnote in flattened_tuplet_subrhythm_scaled {
+                    notes.push(FlattenedNote { time: flattened_subnote.time + current_time, duration: flattened_subnote.duration })
+                }
+                current_time += segment.duration().to_ratio();
+            }
+        }
+    }
+
+    notes
 }
