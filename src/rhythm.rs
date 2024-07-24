@@ -106,7 +106,7 @@ pub struct Rhythm {
 pub struct DoNotConstruct(());
 pub enum RhythmSegment {
     Note(Note),
-    // Rest(NoteDuration), TODO
+    Rest(NoteDuration),
     Tuplet {
         // TODO: incomplete tuplets
         // a tuplet where `actual` number of notes are found in the space that there would normally be `normal` notes
@@ -139,6 +139,7 @@ impl RhythmSegment {
     pub fn duration(&self) -> Duration {
         match self {
             RhythmSegment::Note(n) => n.duration.to_duration(),
+            RhythmSegment::Rest(d) => d.to_duration(),
             RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
         }
     }

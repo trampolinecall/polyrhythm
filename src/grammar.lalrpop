@@ -22,6 +22,7 @@ Rhythm: Rhythm = {
 
 RhythmSegment: RhythmSegment = {
     <Note> => RhythmSegment::Note(<>),
+    "r" <NoteDuration> => RhythmSegment::Rest(<>),
     "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" <Rhythm> =>? RhythmSegment::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
 }
 
