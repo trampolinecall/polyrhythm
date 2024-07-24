@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8" />
+        <title>polyrhythm tool</title>
+        <style>
+            #main {
+                display: flex;
+                flex-flow: column nowrap;
+                height: 100vh;
+            }
+
+            html, body {
+                padding: 0;
+                margin: 0;
+            }
+
+            * {
+                margin: 0.2em;
+            }
+
+            #canvas, #code {
+                margin: 0;
+            }
+
+            #canvas {
+                overflow: scroll;
+                flex: 2;
+            }
+            #errors {
+                overflow: scroll;
+                flex: 1;
+            }
+            #errors:empty {
+                overflow: scroll;
+                flex: 0;
+                margin: 0;
+            }
+            #code {
+                resize: none;
+                flex: 1;
+            }
+        </style>
+        <script type="module">
+            import init from "./pkg/polyrhythm.js";
+            init();
+        </script>
+    </head>
+    <body>
+
+        <div id="main">
+            <canvas id="canvas"></canvas>
+            <div id="errors"></div>
+            <textarea id="code"></textarea>
+        </div>
+    </body>
+</html>

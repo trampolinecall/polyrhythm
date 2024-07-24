@@ -1,0 +1,28 @@
+use std::str::FromStr;
+use lalrpop_util::ParseError;
+use crate::{
+    parse::RhythmError,
+    polyrhythm::Polyrhythm,
+    rhythm::{Note, NoteDuration, Rhythm},
+};
+
+grammar;
+
+extern {
+    type Error = RhythmError;
+}
+
+pub Polyrhythm: Polyrhythm =
+    <rhythms:(Rhythm ";")+> => Polyrhythm { rhythms: rhythms.into_iter().map(|(r, _semi)| r).collect() };
+
+Rhythm: Rhythm = {
+    <Note+> => Rhythm::Notes(<>),
+    "{" <Rhythm> "}" => <>,
+    "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" "{" <Rhythm> "}" =>? Rhythm::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
+};
+
+Note: Note = NoteDuration => Note { duration: <> };
+
+NoteDuration: NoteDuration = Number =>? NoteDuration::from_number(<>).ok_or_else(|| ParseError::User { error: RhythmError::InvalidNoteDuration(<>) });
+
+Number: u32 = r"[0-9]+" => u32::from_str(<>).unwrap();
