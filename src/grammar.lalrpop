@@ -3,7 +3,7 @@ use lalrpop_util::ParseError;
 use crate::{
     parse::RhythmError,
     polyrhythm::Polyrhythm,
-    rhythm::{Note, NoteDuration, Rhythm},
+    rhythm::{Note, NoteDuration, Rhythm, RhythmSegment},
 };
 
 grammar;
@@ -16,10 +16,14 @@ pub Polyrhythm: Polyrhythm =
     <rhythms:(Rhythm ";")+> => Polyrhythm { rhythms: rhythms.into_iter().map(|(r, _semi)| r).collect() };
 
 Rhythm: Rhythm = {
-    <Note+> => Rhythm::Notes(<>),
-    "{" <Rhythm> "}" => <>,
-    "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" "{" <Rhythm> "}" =>? Rhythm::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
+    <RhythmSegment> => Rhythm { segments: vec![<>] },
+    "{" <RhythmSegment+> "}" => Rhythm { segments: <> },
 };
+
+RhythmSegment: RhythmSegment = {
+    <Note> => RhythmSegment::Note(<>),
+    "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" <Rhythm> =>? RhythmSegment::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
+}
 
 Note: Note = NoteDuration => Note { duration: <> };
 

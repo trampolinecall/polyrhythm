@@ -100,9 +100,13 @@ pub struct Note {
     pub duration: NoteDuration,
 }
 
+pub struct Rhythm {
+    pub segments: Vec<RhythmSegment>,
+}
 pub struct DoNotConstruct(());
-pub enum Rhythm {
-    Notes(Vec<Note>),
+pub enum RhythmSegment {
+    Note(Note),
+    // Rest(NoteDuration), TODO
     Tuplet {
         // TODO: incomplete tuplets
         // a tuplet where `actual` number of notes are found in the space that there would normally be `normal` notes
@@ -121,12 +125,12 @@ pub struct TupletInnerDurationMismatch {
     pub expected: Duration,
 }
 
-impl Rhythm {
-    pub fn new_tuplet(actual: u32, normal: u32, note_duration: NoteDuration, rhythm: Rhythm) -> Result<Rhythm, TupletInnerDurationMismatch> {
+impl RhythmSegment {
+    pub fn new_tuplet(actual: u32, normal: u32, note_duration: NoteDuration, rhythm: Rhythm) -> Result<RhythmSegment, TupletInnerDurationMismatch> {
         let actual_inner_duration = rhythm.duration();
         let expected_inner_duration = note_duration.to_duration() * Ratio::from_integer(actual);
         if actual_inner_duration == expected_inner_duration {
-            Ok(Rhythm::Tuplet { actual, normal, note_duration, rhythm: Box::new(rhythm), do_not_construct: DoNotConstruct(()) })
+            Ok(RhythmSegment::Tuplet { actual, normal, note_duration, rhythm: Box::new(rhythm), do_not_construct: DoNotConstruct(()) })
         } else {
             Err(TupletInnerDurationMismatch { actual: actual_inner_duration, expected: expected_inner_duration })
         }
@@ -134,16 +138,26 @@ impl Rhythm {
 
     fn duration(&self) -> Duration {
         match self {
-            Rhythm::Notes(notes) => notes.iter().map(|n| n.duration.to_duration()).sum(),
-            Rhythm::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
+            RhythmSegment::Note(n) => n.duration.to_duration(),
+            RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
         }
     }
 
     // TODO: remove this and do this better
     pub(crate) fn note_durations(&self) -> Vec<Duration> {
         match self {
-            Rhythm::Notes(n) => n.iter().map(|n| n.duration.to_duration()).collect(),
-            Rhythm::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => rhythm.note_durations().iter().map(|dur| *dur * Ratio::new(*normal, *actual)).collect(),
+            RhythmSegment::Note(n) => vec![n.duration.to_duration()],
+            RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => rhythm.note_durations().iter().map(|dur| *dur * Ratio::new(*normal, *actual)).collect(),
         }
+    }
+}
+
+impl Rhythm {
+    fn duration(&self) -> Duration {
+        self.segments.iter().map(|s| s.duration()).sum()
+    }
+    // TODO: remove this and do this better
+    pub(crate) fn note_durations(&self) -> Vec<Duration> {
+        self.segments.iter().flat_map(|s| s.note_durations()).collect()
     }
 }

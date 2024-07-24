@@ -13,7 +13,7 @@ pub fn draw(canvas: &HtmlCanvasElement, polyrhythm: &Polyrhythm) {
     canvas.set_height(500);
     ctx.clear_rect(0.0, 0.0, 1000.0, 500.0);
 
-    const WHOLE_NOTE_SIZE: f64 = 500.0;
+    const WHOLE_NOTE_SIZE: f64 = 400.0;
     for (i, rhythm) in polyrhythm.rhythms.iter().enumerate() {
         let y = (i * 100 + 50) as f64;
         ctx.begin_path();
