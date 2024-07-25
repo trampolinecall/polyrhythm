@@ -1,20 +1,21 @@
 use num_rational::Ratio;
 use num_traits::cast::ToPrimitive;
-use smufl::{Coord, StaffSpaces};
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 use crate::{
-    drawing::pixels::Pixels,
+    drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
     polyrhythm::Polyrhythm,
     rhythm::{NoteDuration, Rhythm},
 };
 
-mod pixels;
+mod coord;
+#[allow(clippy::module_inception)]
+mod drawing;
 
 lazy_static::lazy_static! {
     static ref FONT: String = {
-        let x = format!("{}px Bravura", STAFF_HEIGHT_PIXELS.0);
+        let x = format!("{}px Bravura", STAFF_HEIGHT.0);
         x
     };
     static ref FONT_METADATA: smufl::Metadata = {
@@ -24,12 +25,16 @@ lazy_static::lazy_static! {
     };
 }
 
+// TODO: replace canvas with svg?
+
 // TODO: do this better (scale so that the shortest note is a comfortable distance from the next?)
 const WHOLE_NOTE_WIDTH: Pixels = Pixels(500.0);
 // TODO: decide on a better value for this (make this vary between each rhythm based on the highest number of flags on the shortest note?)
 const RHYTHM_HEIGHT: Pixels = Pixels(100.0);
-const STAFF_SPACE_PIXELS: Pixels = Pixels(10.0);
-const STAFF_HEIGHT_PIXELS: Pixels = Pixels(STAFF_SPACE_PIXELS.0 * 4.0);
+const STAFF_HEIGHT: Pixels = Pixels(STAFF_SPACE_PIXELS.0 * 4.0);
+
+const DEFAULT_STAFF_LINE_THICKNESS: StaffSpaces = StaffSpaces(1.0 / 8.0);
+const DEFAULT_STEM_THICKNESS: StaffSpaces = StaffSpaces(3.0 / 25.0);
 
 pub fn draw(canvas: &HtmlCanvasElement, polyrhythm: &Polyrhythm) {
     let ctx: CanvasRenderingContext2d = canvas.get_context("2d").expect("could not get canvas context").unwrap().dyn_into().expect("2d canvas context should be CanvasRenderingContext2d");
@@ -41,24 +46,25 @@ pub fn draw(canvas: &HtmlCanvasElement, polyrhythm: &Polyrhythm) {
 
     for (i, rhythm) in polyrhythm.rhythms.iter().enumerate() {
         let y = RHYTHM_HEIGHT * (i as f64) + RHYTHM_HEIGHT / 2.0;
-        ctx.begin_path();
-        pixels::move_to(&ctx, Pixels(0.0), y);
-        pixels::line_to(&ctx, Pixels(0.0), y);
-        ctx.set_stroke_style(&"black".into());
-        ctx.stroke();
+        draw_staff_line(&ctx, y);
 
         for note in flatten_rhythm(rhythm) {
             let x = WHOLE_NOTE_WIDTH * note.time.to_f64().unwrap();
+            let note_pos = Point::new(x, y);
             if note.is_rest {
-                draw_rest(&ctx, note.duration, x, y);
+                draw_rest(&ctx, note.duration, note_pos);
             } else {
-                draw_note(&ctx, note.duration, x, y);
+                draw_note(&ctx, note.duration, note_pos);
             }
         }
     }
 }
 
-fn draw_rest(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: Pixels, y: Pixels) {
+fn draw_staff_line(ctx: &CanvasRenderingContext2d, y: Pixels) {
+    drawing::line(ctx, Point::new(Pixels(0.0), y), Point::new(Pixels(1000.0), y), "black", FONT_METADATA.engraving_defaults.staff_line_thickness.unwrap_or(DEFAULT_STAFF_LINE_THICKNESS).into());
+}
+
+fn draw_rest(ctx: &CanvasRenderingContext2d, duration: NoteDuration, pos: Point<Pixels>) {
     ctx.set_font(&FONT);
     let glyph = if duration == NoteDuration::WHOLE {
         smufl::Glyph::RestWhole
@@ -85,11 +91,10 @@ fn draw_rest(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: Pixels, 
     } else {
         panic!("no glyph for rest")
     };
-    web_sys::console::log_1(&(FONT.clone()).into());
-    pixels::fill_text(&ctx, &glyph.codepoint().to_string(), x, y);
+    drawing::draw_glyph(ctx, glyph, pos);
 }
 
-fn draw_note(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: Pixels, y: Pixels) {
+fn draw_note(ctx: &CanvasRenderingContext2d, duration: NoteDuration, pos: Point<Pixels>) {
     ctx.set_font(&FONT);
 
     let notehead = if duration == NoteDuration::WHOLE {
@@ -101,22 +106,23 @@ fn draw_note(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: Pixels, 
     };
 
     let notehead_anchors = FONT_METADATA.anchors.get(notehead).unwrap();
-    let notehead_origin_coord = notehead_anchors.notehead_origin;
-    let notehead_origin_x = notehead_origin_coord.map(|c| c.x()).unwrap_or(StaffSpaces(0.0));
-    let notehead_origin_y = notehead_origin_coord.map(|c| c.y()).unwrap_or(StaffSpaces(0.0));
+    let notehead_origin: Point<_> = notehead_anchors.notehead_origin.map(Point::from).unwrap_or(Point::new(StaffSpaces(0.0), StaffSpaces(0.0))).into(); // TODO: make Point::ZERO work for staff spaces too
 
-    pixels::fill_text(ctx, &notehead.codepoint().to_string(), x - notehead_origin_x.into(), y - notehead_origin_y.into());
+    drawing::draw_glyph(ctx, notehead, pos - notehead_origin);
 
     if let Some(stemstart_offset) = notehead_anchors.stem_up_se {
+        let stemstart_offset = Point::<StaffSpaces>::from(stemstart_offset).into();
+        const STEM_LENGTH: StaffSpaces = StaffSpaces(3.5);
         // draw the stem
-        let stem_up_extension_coord = notehead_anchors.stem_up_nw;
-        let stem_up_extension_x = stem_up_extension_coord.map(|c| c.x()).unwrap_or(StaffSpaces(0.0));
-        let stem_up_extension_y = stem_up_extension_coord.map(|c| c.y()).unwrap_or(StaffSpaces(0.0));
+        let stem_up_extension = notehead_anchors.stem_up_nw.map(Point::from).unwrap_or(Point::new(StaffSpaces(0.0), StaffSpaces(0.0)));
 
-        ctx.begin_path();
-        pixels::move_to(ctx, x + stemstart_offset.x().into(), y + stemstart_offset.y().into());
-        pixels::line_to(ctx, x + stemstart_offset.x().into() + stem_up_extension_x.into(), y + stemstart_offset.y().into() - StaffSpaces(3.5).into() + stem_up_extension_y.into());
-        ctx.stroke();
+        drawing::line(
+            ctx,
+            pos + stemstart_offset,
+            pos + stemstart_offset - Point::new(Pixels(0.0), STEM_LENGTH.into()) + stem_up_extension.into(),
+            "black",
+            FONT_METADATA.engraving_defaults.stem_thickness.unwrap_or(DEFAULT_STEM_THICKNESS).into(),
+        );
 
         let flag_glyph = if duration == NoteDuration::EIGTH {
             Some(smufl::Glyph::Flag8thUp)
@@ -139,7 +145,7 @@ fn draw_note(ctx: &CanvasRenderingContext2d, duration: NoteDuration, x: Pixels, 
         };
 
         if let Some(flag_glyph) = flag_glyph {
-            pixels::fill_text(ctx, &flag_glyph.codepoint().to_string(), x - notehead_origin_x.into() + stemstart_offset.x().into(), y - notehead_origin_y.into() - StaffSpaces(3.5).into());
+            drawing::fill_text(ctx, &flag_glyph.codepoint().to_string(), pos - notehead_origin + stemstart_offset - Point::new(Pixels(0.0), STEM_LENGTH.into()));
         }
     }
 }
