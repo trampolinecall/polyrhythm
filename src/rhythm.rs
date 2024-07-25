@@ -63,10 +63,13 @@ impl NoteDurationKind {
     }
 }
 
+#[derive(Clone)]
 pub struct Rhythm {
     pub segments: Vec<RhythmSegment>,
 }
+#[derive(Clone)]
 pub struct DoNotConstruct(());
+#[derive(Clone)]
 pub enum RhythmSegment {
     Note(NoteDuration),
     TiedNote(Vec<NoteDuration>),

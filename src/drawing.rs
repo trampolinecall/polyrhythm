@@ -15,8 +15,6 @@ mod coord;
 #[allow(clippy::module_inception)]
 mod drawing;
 
-// TODO: replace canvas with svg?
-
 // TODO: do this better (scale so that the shortest note is a comfortable distance from the next?)
 const WHOLE_NOTE_WIDTH: Pixels = Pixels(500.0);
 // TODO: decide on a better value for this (make this vary between each rhythm based on the highest number of flags on the shortest note?)

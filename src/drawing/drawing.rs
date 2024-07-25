@@ -36,10 +36,7 @@ pub fn line(ctx: &CanvasRenderingContext2d, p1: Point<Pixels>, p2: Point<Pixels>
     ctx.stroke();
 }
 
-pub fn arc(ctx: &CanvasRenderingContext2d, center: Point<Pixels>, rad: Pixels, start_angle: f64, end_angle: f64) {
-    ctx.arc(center.x.0, center.y.0, rad.0, start_angle, end_angle).unwrap();
-}
-
+// TODO: be able to select music or text
 pub fn fill_text(ctx: &CanvasRenderingContext2d, font: &Font, text: &str, pos: Point<Pixels>) {
     ctx.set_font(&font.music_font_selector);
     ctx.fill_text(text, pos.x.0, pos.y.0).unwrap()

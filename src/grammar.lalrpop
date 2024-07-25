@@ -19,19 +19,18 @@ pub Polyrhythm: Polyrhythm =
 RhythmLine: RhythmLine =
     <original: Rhythm> <approx:("approx" <Rhythm>)*> ";" => RhythmLine { original, approximations: approx };
 
-Rhythm: Rhythm = {
-    <RhythmSegment> => Rhythm { segments: vec![<>] },
-    "{" <RhythmSegment+> "}" => Rhythm { segments: <> },
-};
+Rhythm: Rhythm = <RhythmSegment> => Rhythm { segments: <> };
 
-RhythmSegment: RhythmSegment = {
-    <NoteDuration> => RhythmSegment::Note(<>),
+RhythmSegment: Vec<RhythmSegment> = {
+    <NoteDuration> => vec![RhythmSegment::Note(<>)],
     <mut durs:(<NoteDuration> "~")+> <last:NoteDuration> => {
         durs.push(last);
-        RhythmSegment::TiedNote(durs)
+        vec![RhythmSegment::TiedNote(durs)]
     },
-    "r" <NoteDuration> => RhythmSegment::Rest(<>),
-    "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" <Rhythm> =>? RhythmSegment::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
+    "r" <NoteDuration> => vec![RhythmSegment::Rest(<>)],
+    "rep" <reps:Number> <rhy:RhythmSegment> => std::iter::repeat(rhy).take(reps as usize).flatten().collect(),
+    "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" <Rhythm> =>? Ok(vec![RhythmSegment::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() })?]),
+    "{" <RhythmSegment+> "}" => <>.into_iter().flatten().collect(),
 }
 
 NoteDuration: NoteDuration =
