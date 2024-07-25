@@ -1,11 +1,11 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 pub mod pixel {
-    use std::ops::{Add, Div, Mul, Sub};
+    use std::ops::{Add, Div, Mul, Neg, Sub};
 
     use crate::drawing::coord::staff_spaces::StaffSpaces;
 
-    pub const STAFF_SPACE_PIXELS: Pixels = Pixels(20.0);
+    pub const STAFF_SPACE_PIXELS: Pixels = Pixels(15.0);
 
     #[derive(Copy, Clone, PartialEq, PartialOrd)]
     pub struct Pixels(pub f64);
@@ -59,6 +59,14 @@ pub mod pixel {
             Pixels(self.0 / rhs)
         }
     }
+
+    impl Neg for Pixels {
+        type Output = Pixels;
+
+        fn neg(self) -> Pixels {
+            Pixels(-self.0)
+        }
+    }
 }
 
 pub mod staff_spaces {
@@ -85,7 +93,7 @@ impl<T> Point<T> {
 
 impl From<smufl::Coord> for Point<StaffSpaces> {
     fn from(coord: smufl::Coord) -> Self {
-        Point { x: coord.x(), y: coord.y() }
+        Point { x: coord.x(), y: StaffSpaces(-coord.y().0) }
     }
 }
 impl From<Point<StaffSpaces>> for Point<Pixels> {

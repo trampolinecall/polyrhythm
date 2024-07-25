@@ -110,16 +110,16 @@ fn draw_note(ctx: &CanvasRenderingContext2d, duration: NoteDuration, pos: Point<
 
     drawing::draw_glyph(ctx, notehead, pos - notehead_origin);
 
-    if let Some(stemstart_offset) = notehead_anchors.stem_up_se {
-        let stemstart_offset = Point::<StaffSpaces>::from(stemstart_offset).into();
+    if let Some(stem_start_offset) = notehead_anchors.stem_up_se {
+        let stemstart_offset = Point::<Pixels>::from(Point::<StaffSpaces>::from(stem_start_offset));
         const STEM_LENGTH: StaffSpaces = StaffSpaces(3.5);
         // draw the stem
-        let stem_up_extension = notehead_anchors.stem_up_nw.map(Point::from).unwrap_or(Point::new(StaffSpaces(0.0), StaffSpaces(0.0)));
+        let stem_up_extension = notehead_anchors.stem_up_nw.map(Point::<StaffSpaces>::from).map(Point::<Pixels>::from).unwrap_or(Point::ZERO);
 
         drawing::line(
             ctx,
             pos + stemstart_offset,
-            pos + stemstart_offset - Point::new(Pixels(0.0), STEM_LENGTH.into()) + stem_up_extension.into(),
+            pos + stemstart_offset - Point::new(Pixels(0.0), STEM_LENGTH.into()) + stem_up_extension,
             "black",
             FONT_METADATA.engraving_defaults.stem_thickness.unwrap_or(DEFAULT_STEM_THICKNESS).into(),
         );
