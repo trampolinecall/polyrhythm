@@ -6,7 +6,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
     polyrhythm::Polyrhythm,
-    rhythm::{NoteDuration, Rhythm},
+    rhythm::{NoteDuration, NoteDurationKind, Rhythm},
 };
 
 pub use drawing::Font;
@@ -55,41 +55,27 @@ fn draw_staff_line(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels) {
 }
 
 fn draw_rest(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, pos: Point<Pixels>) {
-    let glyph = if duration == NoteDuration::WHOLE {
-        smufl::Glyph::RestWhole
-    } else if duration == NoteDuration::HALF {
-        smufl::Glyph::RestHalf
-    } else if duration == NoteDuration::QUARTER {
-        smufl::Glyph::RestQuarter
-    } else if duration == NoteDuration::EIGTH {
-        smufl::Glyph::Rest8th
-    } else if duration == NoteDuration::SIXTEENTH {
-        smufl::Glyph::Rest16th
-    } else if duration == NoteDuration::THIRTYSECOND {
-        smufl::Glyph::Rest32nd
-    } else if duration == NoteDuration::SIXTYFOURTH {
-        smufl::Glyph::Rest64th
-    } else if duration == NoteDuration::ND128 {
-        smufl::Glyph::Rest128th
-    } else if duration == NoteDuration::ND256 {
-        smufl::Glyph::Rest256th
-    } else if duration == NoteDuration::ND512 {
-        smufl::Glyph::Rest512th
-    } else if duration == NoteDuration::ND1024 {
-        smufl::Glyph::Rest1024th
-    } else {
-        panic!("no glyph for rest")
+    let glyph = match duration.kind {
+        NoteDurationKind::Whole => smufl::Glyph::RestWhole,
+        NoteDurationKind::Half => smufl::Glyph::RestHalf,
+        NoteDurationKind::Quarter => smufl::Glyph::RestQuarter,
+        NoteDurationKind::Eigth => smufl::Glyph::Rest8th,
+        NoteDurationKind::Sixteenth => smufl::Glyph::Rest16th,
+        NoteDurationKind::Nd32 => smufl::Glyph::Rest32nd,
+        NoteDurationKind::Nd64 => smufl::Glyph::Rest64th,
+        NoteDurationKind::Nd128 => smufl::Glyph::Rest128th,
+        NoteDurationKind::Nd256 => smufl::Glyph::Rest256th,
+        NoteDurationKind::Nd512 => smufl::Glyph::Rest512th,
+        NoteDurationKind::Nd1024 => smufl::Glyph::Rest1024th,
     };
     drawing::draw_glyph(ctx, font, glyph, pos);
 }
 
 fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, pos: Point<Pixels>) {
-    let notehead = if duration == NoteDuration::WHOLE {
-        smufl::Glyph::NoteheadWhole
-    } else if duration == NoteDuration::HALF {
-        smufl::Glyph::NoteheadHalf
-    } else {
-        smufl::Glyph::NoteheadBlack
+    let notehead = match duration.kind {
+        NoteDurationKind::Whole => smufl::Glyph::NoteheadWhole,
+        NoteDurationKind::Half => smufl::Glyph::NoteheadHalf,
+        _ => smufl::Glyph::NoteheadBlack,
     };
 
     let notehead_anchors = font.metadata.anchors.get(notehead).unwrap();
@@ -111,24 +97,18 @@ fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
             font.metadata.engraving_defaults.stem_thickness.unwrap_or(DEFAULT_STEM_THICKNESS).into(),
         );
 
-        let flag_glyph = if duration == NoteDuration::EIGTH {
-            Some(smufl::Glyph::Flag8thUp)
-        } else if duration == NoteDuration::SIXTEENTH {
-            Some(smufl::Glyph::Flag16thUp)
-        } else if duration == NoteDuration::THIRTYSECOND {
-            Some(smufl::Glyph::Flag32ndUp)
-        } else if duration == NoteDuration::SIXTYFOURTH {
-            Some(smufl::Glyph::Flag64thUp)
-        } else if duration == NoteDuration::ND128 {
-            Some(smufl::Glyph::Flag128thUp)
-        } else if duration == NoteDuration::ND256 {
-            Some(smufl::Glyph::Flag256thUp)
-        } else if duration == NoteDuration::ND512 {
-            Some(smufl::Glyph::Flag512thUp)
-        } else if duration == NoteDuration::ND1024 {
-            Some(smufl::Glyph::Flag1024thUp)
-        } else {
-            None
+        let flag_glyph = match duration.kind {
+            NoteDurationKind::Whole => None,
+            NoteDurationKind::Half => None,
+            NoteDurationKind::Quarter => None,
+            NoteDurationKind::Eigth => Some(smufl::Glyph::Flag8thUp),
+            NoteDurationKind::Sixteenth => Some(smufl::Glyph::Flag16thUp),
+            NoteDurationKind::Nd32 => Some(smufl::Glyph::Flag32ndUp),
+            NoteDurationKind::Nd64 => Some(smufl::Glyph::Flag64thUp),
+            NoteDurationKind::Nd128 => Some(smufl::Glyph::Flag128thUp),
+            NoteDurationKind::Nd256 => Some(smufl::Glyph::Flag256thUp),
+            NoteDurationKind::Nd512 => Some(smufl::Glyph::Flag512thUp),
+            NoteDurationKind::Nd1024 => Some(smufl::Glyph::Flag1024thUp),
         };
 
         if let Some(flag_glyph) = flag_glyph {
@@ -149,12 +129,12 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
 
     for segment in &r.segments {
         match segment {
-            crate::rhythm::RhythmSegment::Note(n) => {
-                notes.push(FlattenedNote { time: current_time, is_rest: false, duration: n.duration });
+            crate::rhythm::RhythmSegment::Note(dur) => {
+                notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur });
                 current_time += segment.duration().to_ratio();
             }
-            crate::rhythm::RhythmSegment::Rest(duration) => {
-                notes.push(FlattenedNote { time: current_time, is_rest: true, duration: *duration });
+            crate::rhythm::RhythmSegment::Rest(dur) => {
+                notes.push(FlattenedNote { time: current_time, is_rest: true, duration: *dur });
                 current_time += segment.duration().to_ratio();
             }
             crate::rhythm::RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => {

@@ -3,7 +3,7 @@ use lalrpop_util::ParseError;
 use crate::{
     parse::RhythmError,
     polyrhythm::Polyrhythm,
-    rhythm::{Note, NoteDuration, Rhythm, RhythmSegment},
+    rhythm::{NoteDuration, NoteDurationKind, Rhythm, RhythmSegment},
 };
 
 grammar;
@@ -13,7 +13,7 @@ extern {
 }
 
 pub Polyrhythm: Polyrhythm =
-    <rhythms:(Rhythm ";")+> => Polyrhythm { rhythms: rhythms.into_iter().map(|(r, _semi)| r).collect() };
+    <rhythms:(<Rhythm> ";")+> => Polyrhythm { rhythms };
 
 Rhythm: Rhythm = {
     <RhythmSegment> => Rhythm { segments: vec![<>] },
@@ -21,13 +21,19 @@ Rhythm: Rhythm = {
 };
 
 RhythmSegment: RhythmSegment = {
-    <Note> => RhythmSegment::Note(<>),
+    <NoteDuration> => RhythmSegment::Note(<>),
     "r" <NoteDuration> => RhythmSegment::Rest(<>),
     "tuplet" <Number> "/" <Number> "(" <NoteDuration> ")" <Rhythm> =>? RhythmSegment::new_tuplet(<>).map_err(|e| ParseError::User { error: e.into() }),
 }
 
-Note: Note = NoteDuration => Note { duration: <> };
+NoteDuration: NoteDuration =
+    <num:Number> <dot:"."?> =>? {
+        let dotted = dot.is_some();
 
-NoteDuration: NoteDuration = Number =>? NoteDuration::from_number(<>).ok_or(ParseError::User { error: RhythmError::InvalidNoteDuration(<>) });
+        Ok(NoteDuration {
+            kind: NoteDurationKind::from_number(num).ok_or(ParseError::User { error: RhythmError::InvalidNoteDuration(num) })?
+            // TODO: add dotted
+        })
+    };
 
 Number: u32 = r"[0-9]+" => u32::from_str(<>).unwrap();

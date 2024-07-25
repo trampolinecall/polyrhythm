@@ -1,107 +1,65 @@
-use std::{
-    fmt::Display,
-    iter::Sum,
-    ops::{Add, Div, Mul, Sub},
-};
-
+pub use duration::Duration;
 use num_rational::Ratio;
 
-// the u32 is the exponent that makes the note name
-// so for example, whole   notes have a duration of NoteDuration(0) because 2^0 = 1
-// so for example, half    notes have a duration of NoteDuration(1) because 2^1 = 2
-// so for example, quarter notes have a duration of NoteDuration(2) because 2^2 = 4
-// TODO: turn this into an enum, stop at 1024
+pub mod duration;
+
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct NoteDuration(u32);
+pub struct NoteDuration {
+    pub kind: NoteDurationKind,
+}
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum NoteDurationKind {
+    Whole,
+    Half,
+    Quarter,
+    Eigth,
+    Sixteenth,
+    Nd32,
+    Nd64,
+    Nd128,
+    Nd256,
+    Nd512,
+    Nd1024,
+}
 
 impl NoteDuration {
-    pub const WHOLE: NoteDuration = NoteDuration(0);
-    pub const HALF: NoteDuration = NoteDuration(1);
-    pub const QUARTER: NoteDuration = NoteDuration(2);
-    pub const EIGTH: NoteDuration = NoteDuration(3);
-    pub const SIXTEENTH: NoteDuration = NoteDuration(4);
-    pub const THIRTYSECOND: NoteDuration = NoteDuration(5);
-    pub const SIXTYFOURTH: NoteDuration = NoteDuration(6);
-    pub const ND128: NoteDuration = NoteDuration(7);
-    pub const ND256: NoteDuration = NoteDuration(8);
-    pub const ND512: NoteDuration = NoteDuration(9);
-    pub const ND1024: NoteDuration = NoteDuration(10);
-
     pub fn to_duration(self) -> Duration {
-        Duration::WHOLE_NOTE * Ratio::new(1, 2u32.pow(self.0))
+        Duration::WHOLE_NOTE * self.kind.to_ratio()
     }
-
-    pub fn from_number(number: u32) -> Option<NoteDuration> {
-        if number.is_power_of_two() {
-            number.checked_ilog2().map(NoteDuration)
-        } else {
-            None
+}
+impl NoteDurationKind {
+    pub fn to_ratio(self) -> Ratio<u32> {
+        match self {
+            NoteDurationKind::Whole => Ratio::new(1, 1),
+            NoteDurationKind::Half => Ratio::new(1, 2),
+            NoteDurationKind::Quarter => Ratio::new(1, 4),
+            NoteDurationKind::Eigth => Ratio::new(1, 8),
+            NoteDurationKind::Sixteenth => Ratio::new(1, 16),
+            NoteDurationKind::Nd32 => Ratio::new(1, 32),
+            NoteDurationKind::Nd64 => Ratio::new(1, 64),
+            NoteDurationKind::Nd128 => Ratio::new(1, 128),
+            NoteDurationKind::Nd256 => Ratio::new(1, 256),
+            NoteDurationKind::Nd512 => Ratio::new(1, 512),
+            NoteDurationKind::Nd1024 => Ratio::new(1, 1024),
         }
     }
-}
 
-// durations are expressed in terms of whole notes
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub struct Duration(Ratio<u32>);
-
-impl Add<Duration> for Duration {
-    type Output = Duration;
-
-    fn add(self, rhs: Duration) -> Duration {
-        Duration(self.0 + rhs.0)
+    pub fn from_number(number: u32) -> Option<NoteDurationKind> {
+        match number {
+            1 => Some(NoteDurationKind::Whole),
+            2 => Some(NoteDurationKind::Half),
+            4 => Some(NoteDurationKind::Quarter),
+            8 => Some(NoteDurationKind::Eigth),
+            16 => Some(NoteDurationKind::Sixteenth),
+            32 => Some(NoteDurationKind::Nd32),
+            64 => Some(NoteDurationKind::Nd64),
+            128 => Some(NoteDurationKind::Nd128),
+            256 => Some(NoteDurationKind::Nd256),
+            512 => Some(NoteDurationKind::Nd512),
+            1024 => Some(NoteDurationKind::Nd1024),
+            _ => None,
+        }
     }
-}
-impl Sub<Duration> for Duration {
-    type Output = Duration;
-
-    fn sub(self, rhs: Duration) -> Duration {
-        Duration(self.0 - rhs.0)
-    }
-}
-impl Mul<Ratio<u32>> for Duration {
-    type Output = Duration;
-
-    fn mul(self, rhs: Ratio<u32>) -> Duration {
-        Duration(self.0 * rhs)
-    }
-}
-impl Div<Ratio<u32>> for Duration {
-    type Output = Duration;
-
-    fn div(self, rhs: Ratio<u32>) -> Duration {
-        Duration(self.0 / rhs)
-    }
-}
-impl Sum for Duration {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Duration::ZERO, |a, b| a + b)
-    }
-}
-impl Display for Duration {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0) // TODO: do this better
-    }
-}
-
-impl Duration {
-    // it is safe to use new_raw here because we know that the denominators are not 0
-    const ZERO: Duration = Duration(Ratio::new_raw(0, 1));
-    const WHOLE_NOTE: Duration = Duration(Ratio::new_raw(1, 1));
-    const HALF_NOTE: Duration = Duration(Ratio::new_raw(1, 2));
-    const QUARTER_NOTE: Duration = Duration(Ratio::new_raw(1, 4));
-    const EIGTH_NOTE: Duration = Duration(Ratio::new_raw(1, 8));
-    const SIXTEENTH_NOTE: Duration = Duration(Ratio::new_raw(1, 16));
-    const THIRTYSECOND_NOTE: Duration = Duration(Ratio::new_raw(1, 32));
-    const SIXTYFOURTH_NOTE: Duration = Duration(Ratio::new_raw(1, 64));
-    const ONEHUNDREDTWENTYSECOND_NOTE: Duration = Duration(Ratio::new_raw(1, 128));
-
-    pub(crate) fn to_ratio(self) -> Ratio<u32> {
-        self.0
-    }
-}
-
-pub struct Note {
-    pub duration: NoteDuration,
 }
 
 pub struct Rhythm {
@@ -109,7 +67,7 @@ pub struct Rhythm {
 }
 pub struct DoNotConstruct(());
 pub enum RhythmSegment {
-    Note(Note),
+    Note(NoteDuration),
     Rest(NoteDuration),
     Tuplet {
         // TODO: incomplete tuplets
@@ -142,8 +100,8 @@ impl RhythmSegment {
 
     pub fn duration(&self) -> Duration {
         match self {
-            RhythmSegment::Note(n) => n.duration.to_duration(),
-            RhythmSegment::Rest(d) => d.to_duration(),
+            RhythmSegment::Note(dur) => dur.to_duration(),
+            RhythmSegment::Rest(dur) => dur.to_duration(),
             RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
         }
     }
