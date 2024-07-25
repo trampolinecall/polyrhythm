@@ -28,6 +28,6 @@ RhythmSegment: RhythmSegment = {
 
 Note: Note = NoteDuration => Note { duration: <> };
 
-NoteDuration: NoteDuration = Number =>? NoteDuration::from_number(<>).ok_or_else(|| ParseError::User { error: RhythmError::InvalidNoteDuration(<>) });
+NoteDuration: NoteDuration = Number =>? NoteDuration::from_number(<>).ok_or(ParseError::User { error: RhythmError::InvalidNoteDuration(<>) });
 
 Number: u32 = r"[0-9]+" => u32::from_str(<>).unwrap();
