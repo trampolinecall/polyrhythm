@@ -1,4 +1,4 @@
-use crate::rhythm::{Duration, Rhythm};
+use crate::rhythm::Rhythm;
 use num_rational::Ratio;
 use num_traits::ToPrimitive;
 
