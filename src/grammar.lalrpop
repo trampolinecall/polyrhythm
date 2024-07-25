@@ -2,7 +2,7 @@ use std::str::FromStr;
 use lalrpop_util::ParseError;
 use crate::{
     parse::RhythmError,
-    polyrhythm::Polyrhythm,
+    polyrhythm::{Polyrhythm, RhythmLine},
     rhythm::{NoteDuration, NoteDurationKind, Rhythm, RhythmSegment},
 };
 
@@ -13,7 +13,11 @@ extern {
 }
 
 pub Polyrhythm: Polyrhythm =
-    <rhythms:(<Rhythm> ";")+> => Polyrhythm { rhythms };
+    <pulse:("pulse" <Rhythm> ";")?>
+    <rhythms:RhythmLine+> => Polyrhythm { pulse, rhythms };
+
+RhythmLine: RhythmLine =
+    <original: Rhythm> <approx:("approx" <Rhythm>)*> ";" => RhythmLine { original, approximations: approx };
 
 Rhythm: Rhythm = {
     <RhythmSegment> => Rhythm { segments: vec![<>] },

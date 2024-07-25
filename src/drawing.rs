@@ -5,7 +5,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
-    polyrhythm::Polyrhythm,
+    polyrhythm::{self, Polyrhythm},
     rhythm::{NoteDuration, NoteDurationKind, Rhythm},
 };
 
@@ -26,6 +26,8 @@ const STAFF_HEIGHT: Pixels = Pixels(STAFF_SPACE_PIXELS.0 * 4.0);
 const DEFAULT_STAFF_LINE_THICKNESS: StaffSpaces = StaffSpaces(1.0 / 8.0);
 const DEFAULT_SLUR_MIDPOINT_THICKNESS: StaffSpaces = StaffSpaces(0.22);
 const DEFAULT_STEM_THICKNESS: StaffSpaces = StaffSpaces(3.0 / 25.0);
+const DEFAULT_BEAT_LINE_THICKNESS: StaffSpaces = StaffSpaces(1.0 / 25.0);
+const DEFAULT_CORRESPONDENCE_LINE_THICKNESS: StaffSpaces = StaffSpaces(2.0 / 25.0);
 
 pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
     let ctx: CanvasRenderingContext2d = canvas.get_context("2d").expect("could not get canvas context").unwrap().dyn_into().expect("2d canvas context should be CanvasRenderingContext2d");
@@ -35,19 +37,55 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
     canvas.set_height(500);
     ctx.clear_rect(0.0, 0.0, 1000.0, 500.0);
 
-    for (i, rhythm) in polyrhythm.rhythms.iter().enumerate() {
-        let y = RHYTHM_HEIGHT * (i as f64) + RHYTHM_HEIGHT / 2.0;
-        draw_staff_line(&ctx, font, y);
+    let mut y = RHYTHM_HEIGHT / 2.0;
+    if let Some(pulse) = &polyrhythm.pulse {
+        draw_rhythm(&ctx, font, y, pulse);
+        draw_pulse(&ctx, pulse);
+        y += RHYTHM_HEIGHT;
+    }
 
-        for note in flatten_rhythm(rhythm) {
-            let x = WHOLE_NOTE_WIDTH * note.time.to_f64().unwrap();
-            let note_pos = Point::new(x, y);
-            if note.is_rest {
-                draw_rest(&ctx, font, note.duration, note_pos);
-            } else {
-                draw_note(&ctx, font, note.duration, note.tied_to_next, note_pos);
+    for line in polyrhythm.rhythms.iter() {
+        let original_flattened = polyrhythm::flatten_rhythm(&line.original);
+        let original_y = y;
+
+        draw_rhythm(&ctx, font, y, &line.original);
+
+        y += RHYTHM_HEIGHT;
+
+        for approx in &line.approximations {
+            draw_rhythm(&ctx, font, y, approx);
+
+            let approx_error = polyrhythm::score_error(&line.original, approx);
+            drawing::fill_text(&ctx, font, &format!("error: {approx_error}"), Point::new(Pixels(0.0), y));
+
+            let approx_flattened = polyrhythm::flatten_rhythm(approx);
+
+            for (original_ev, approx_ev) in original_flattened.iter().zip(approx_flattened) {
+                drawing::line(&ctx, Point::new(time_to_x(original_ev.time), original_y), Point::new(time_to_x(approx_ev.time), y), "grey", DEFAULT_CORRESPONDENCE_LINE_THICKNESS.into());
             }
+
+            y += RHYTHM_HEIGHT;
         }
+    }
+}
+
+fn draw_rhythm(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels, rhythm: &Rhythm) {
+    draw_staff_line(ctx, font, y);
+    for note in flatten_rhythm(rhythm) {
+        let x = time_to_x(note.time);
+        let note_pos = Point::new(x, y);
+        if note.is_rest {
+            draw_rest(ctx, font, note.duration, note_pos);
+        } else {
+            draw_note(ctx, font, note.duration, note.tied_to_next, note_pos);
+        }
+    }
+}
+
+fn draw_pulse(ctx: &CanvasRenderingContext2d, pulse: &Rhythm) {
+    for note in flatten_rhythm(pulse) {
+        let x = WHOLE_NOTE_WIDTH * note.time.to_f64().unwrap();
+        drawing::line(ctx, Point::new(x, Pixels(0.0)), Point::new(x, Pixels(500.0)), "grey", DEFAULT_BEAT_LINE_THICKNESS.into())
     }
 }
 
@@ -72,7 +110,8 @@ fn draw_rest(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
     drawing::draw_glyph(ctx, font, glyph, pos);
 
     if duration.dotted {
-        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into()); // TODO: adjust x position
+        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into());
+        // TODO: adjust x position
     }
 }
 
@@ -128,7 +167,8 @@ fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
     }
 
     if duration.dotted {
-        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into()); // TODO: adjust x position
+        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into());
+        // TODO: adjust x position
     }
 }
 
@@ -187,4 +227,8 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
     }
 
     notes
+}
+
+fn time_to_x(time: Ratio<u32>) -> Pixels {
+    WHOLE_NOTE_WIDTH * time.to_f64().unwrap()
 }

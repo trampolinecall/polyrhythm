@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 pub mod pixel {
-    use std::ops::{Add, Div, Mul, Neg, Sub};
+    use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
     use crate::drawing::coord::staff_spaces::StaffSpaces;
 
@@ -65,6 +65,27 @@ pub mod pixel {
 
         fn neg(self) -> Pixels {
             Pixels(-self.0)
+        }
+    }
+
+    impl AddAssign<Pixels> for Pixels {
+        fn add_assign(&mut self, rhs: Pixels) {
+            self.0 += rhs.0;
+        }
+    }
+    impl SubAssign<Pixels> for Pixels {
+        fn sub_assign(&mut self, rhs: Pixels) {
+            self.0 -= rhs.0;
+        }
+    }
+    impl MulAssign<f64> for Pixels {
+        fn mul_assign(&mut self, rhs: f64) {
+            self.0 *= rhs;
+        }
+    }
+    impl DivAssign<f64> for Pixels {
+        fn div_assign(&mut self, rhs: f64) {
+            self.0 /= rhs;
         }
     }
 }
