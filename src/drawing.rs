@@ -24,6 +24,7 @@ const RHYTHM_HEIGHT: Pixels = Pixels(100.0);
 const STAFF_HEIGHT: Pixels = Pixels(STAFF_SPACE_PIXELS.0 * 4.0);
 
 const DEFAULT_STAFF_LINE_THICKNESS: StaffSpaces = StaffSpaces(1.0 / 8.0);
+const DEFAULT_SLUR_MIDPOINT_THICKNESS: StaffSpaces = StaffSpaces(0.22);
 const DEFAULT_STEM_THICKNESS: StaffSpaces = StaffSpaces(3.0 / 25.0);
 
 pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
@@ -44,7 +45,7 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
             if note.is_rest {
                 draw_rest(&ctx, font, note.duration, note_pos);
             } else {
-                draw_note(&ctx, font, note.duration, note_pos);
+                draw_note(&ctx, font, note.duration, note.tied_to_next, note_pos);
             }
         }
     }
@@ -71,7 +72,7 @@ fn draw_rest(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
     drawing::draw_glyph(ctx, font, glyph, pos);
 }
 
-fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, pos: Point<Pixels>) {
+fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, tied_to_next: bool, pos: Point<Pixels>) {
     let notehead = match duration.kind {
         NoteDurationKind::Whole => smufl::Glyph::NoteheadWhole,
         NoteDurationKind::Half => smufl::Glyph::NoteheadHalf,
@@ -115,12 +116,27 @@ fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
             drawing::fill_text(ctx, font, &flag_glyph.codepoint().to_string(), pos - notehead_origin + stemstart_offset - Point::new(Pixels(0.0), STEM_LENGTH.into()));
         }
     }
+
+    if tied_to_next {
+        draw_slur(ctx, font, pos + Point::new(StaffSpaces(0.0), StaffSpaces(0.1)).into(), pos + Point::new(StaffSpaces(3.0), StaffSpaces(0.1)).into()); // TODO: tie to the next note, not to a hardcoded offset
+    }
+}
+
+fn draw_slur(ctx: &CanvasRenderingContext2d, font: &Font, start: Point<Pixels>, end: Point<Pixels>) {
+    let dx = end.x - start.x;
+
+    let cp1 = Point::new(start.x + dx / 3.0, start.y + Pixels(25.0));
+    let cp2 = Point::new(end.x - dx / 3.0, end.y + Pixels(25.0));
+
+    // TODO: do varying line width
+    drawing::bezier(ctx, start, cp1, cp2, end, "black", font.metadata.engraving_defaults.slur_midpoint_thickness.unwrap_or(DEFAULT_SLUR_MIDPOINT_THICKNESS).into());
 }
 
 struct FlattenedNote {
     time: Ratio<u32>,
     is_rest: bool,
     duration: NoteDuration,
+    tied_to_next: bool,
 }
 fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
     let mut current_time = Ratio::ZERO;
@@ -130,18 +146,30 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
     for segment in &r.segments {
         match segment {
             crate::rhythm::RhythmSegment::Note(dur) => {
-                notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur });
+                notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur, tied_to_next: false });
                 current_time += segment.duration().to_ratio();
             }
+            crate::rhythm::RhythmSegment::TiedNote(durs) => {
+                let (last, firsts) = durs.split_last().expect("cannot have 0 notes in tied notes");
+                for dur in firsts {
+                    notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur, tied_to_next: true });
+                    current_time += dur.to_duration().to_ratio();
+                }
+                notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *last, tied_to_next: false });
+                current_time += last.to_duration().to_ratio();
+            }
             crate::rhythm::RhythmSegment::Rest(dur) => {
-                notes.push(FlattenedNote { time: current_time, is_rest: true, duration: *dur });
+                notes.push(FlattenedNote { time: current_time, is_rest: true, duration: *dur, tied_to_next: false });
                 current_time += segment.duration().to_ratio();
             }
             crate::rhythm::RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => {
-                let flattened_tuplet_subrhythm_scaled =
-                    flatten_rhythm(rhythm).into_iter().map(|note| FlattenedNote { time: note.time * Ratio::new(*normal, *actual), is_rest: note.is_rest, duration: note.duration });
-                for flattened_subnote in flattened_tuplet_subrhythm_scaled {
-                    notes.push(FlattenedNote { time: flattened_subnote.time + current_time, is_rest: flattened_subnote.is_rest, duration: flattened_subnote.duration })
+                for flattened_subnote in flatten_rhythm(rhythm).into_iter() {
+                    notes.push(FlattenedNote {
+                        time: flattened_subnote.time * Ratio::new(*normal, *actual) + current_time,
+                        is_rest: flattened_subnote.is_rest,
+                        duration: flattened_subnote.duration,
+                        tied_to_next: flattened_subnote.tied_to_next,
+                    })
                 }
                 current_time += segment.duration().to_ratio();
             }

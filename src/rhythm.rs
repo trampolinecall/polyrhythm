@@ -68,6 +68,7 @@ pub struct Rhythm {
 pub struct DoNotConstruct(());
 pub enum RhythmSegment {
     Note(NoteDuration),
+    TiedNote(Vec<NoteDuration>),
     Rest(NoteDuration),
     Tuplet {
         // TODO: incomplete tuplets
@@ -101,6 +102,7 @@ impl RhythmSegment {
     pub fn duration(&self) -> Duration {
         match self {
             RhythmSegment::Note(dur) => dur.to_duration(),
+            RhythmSegment::TiedNote(durs) => durs.iter().copied().map(NoteDuration::to_duration).sum(),
             RhythmSegment::Rest(dur) => dur.to_duration(),
             RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
         }

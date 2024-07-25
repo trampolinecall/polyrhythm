@@ -5,7 +5,7 @@ pub mod pixel {
 
     use crate::drawing::coord::staff_spaces::StaffSpaces;
 
-    pub const STAFF_SPACE_PIXELS: Pixels = Pixels(15.0);
+    pub const STAFF_SPACE_PIXELS: Pixels = Pixels(10.0);
 
     #[derive(Copy, Clone, PartialEq, PartialOrd)]
     pub struct Pixels(pub f64);

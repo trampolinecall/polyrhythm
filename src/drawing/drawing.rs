@@ -47,3 +47,13 @@ pub fn fill_text(ctx: &CanvasRenderingContext2d, font: &Font, text: &str, pos: P
 pub fn draw_glyph(ctx: &CanvasRenderingContext2d, font: &Font, glyph: smufl::Glyph, pos: Point<Pixels>) {
     fill_text(ctx, font, &glyph.codepoint().to_string(), pos)
 }
+
+pub fn bezier(ctx: &CanvasRenderingContext2d, start: Point<Pixels>, cp1: Point<Pixels>, cp2: Point<Pixels>, end: Point<Pixels>, color: &str, thickness: Pixels) {
+    ctx.set_stroke_style(&color.into());
+    ctx.set_line_width(thickness.0);
+
+    ctx.begin_path();
+    ctx.move_to(start.x.0, start.y.0);
+    ctx.bezier_curve_to(cp1.x.0, cp1.y.0, cp2.x.0, cp2.y.0, end.x.0, end.y.0);
+    ctx.stroke();
+}
