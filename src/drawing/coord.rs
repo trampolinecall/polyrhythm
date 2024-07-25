@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Sub};
 
 pub mod pixel {
     use std::ops::{Add, Div, Mul, Neg, Sub};

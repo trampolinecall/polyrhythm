@@ -7,7 +7,7 @@ mod polyrhythm;
 mod rhythm;
 
 #[wasm_bindgen(start)]
-pub fn main() {
+pub async fn main() {
     std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     let window = web_sys::window().expect("global window does not exists");
@@ -16,6 +16,8 @@ pub fn main() {
     let codebox = document.get_element_by_id("code").expect("could not find code box").dyn_into::<HtmlTextAreaElement>().expect("code box should be a textarea");
     let canvas = document.get_element_by_id("canvas").expect("could not find canvas").dyn_into::<HtmlCanvasElement>().expect("canvas should be canvas");
     let errors = document.get_element_by_id("errors").expect("could not find errors box");
+
+    let font = drawing::Font::load_bravura(&window).await;
 
     codebox
         .add_event_listener_with_callback(
@@ -27,7 +29,7 @@ pub fn main() {
                     let parsed = parse::parse(&code);
                     match parsed {
                         Ok(polyrhythm) => {
-                            drawing::draw(&canvas, &polyrhythm);
+                            drawing::draw(&canvas, &font, &polyrhythm);
                             errors.replace_children_with_node(&web_sys::js_sys::Array::new());
                         }
                         Err(err) => {

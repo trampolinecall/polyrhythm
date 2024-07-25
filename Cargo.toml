@@ -10,11 +10,11 @@ crate-type = ["cdylib"]
 console_error_panic_hook = "0.1.7"
 num-rational = "0.4.2"
 wasm-bindgen = "0.2.92"
-web-sys = { version = "0.3.69", features = ["console", "Window", "Document", "Element", "EventTarget", "HtmlDivElement", "HtmlParagraphElement", "HtmlCanvasElement", "HtmlTextAreaElement", "CanvasRenderingContext2d"] }
+web-sys = { version = "0.3.69", features = ["console", "Window", "Document", "Element", "EventTarget", "HtmlDivElement", "HtmlParagraphElement", "HtmlCanvasElement", "HtmlTextAreaElement", "CanvasRenderingContext2d", "Response", "ReadableStream"] }
 lalrpop-util = { version = "0.20.2", features = ["lexer", "unicode"]}
 num-traits = "0.2.19"
 smufl = "0.2.1"
-lazy_static = "1.5.0"
+wasm-bindgen-futures = "0.4.42"
 
 [build-dependencies]
 lalrpop = "0.20.2"
