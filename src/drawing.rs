@@ -70,6 +70,10 @@ fn draw_rest(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
         NoteDurationKind::Nd1024 => smufl::Glyph::Rest1024th,
     };
     drawing::draw_glyph(ctx, font, glyph, pos);
+
+    if duration.dotted {
+        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into()); // TODO: adjust x position
+    }
 }
 
 fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, tied_to_next: bool, pos: Point<Pixels>) {
@@ -118,11 +122,17 @@ fn draw_note(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration
     }
 
     if tied_to_next {
-        draw_slur(ctx, font, pos + Point::new(StaffSpaces(0.0), StaffSpaces(0.1)).into(), pos + Point::new(StaffSpaces(3.0), StaffSpaces(0.1)).into()); // TODO: tie to the next note, not to a hardcoded offset
+        draw_tie(ctx, font, pos + Point::new(StaffSpaces(0.0), StaffSpaces(0.1)).into(), pos + Point::new(StaffSpaces(3.0), StaffSpaces(0.1)).into());
+        // TODO: adjust offset from notehead
+        // TODO: tie to the next note, not to a hardcoded offset
+    }
+
+    if duration.dotted {
+        drawing::draw_glyph(ctx, font, smufl::Glyph::AugmentationDot, pos + Point::new(StaffSpaces(1.0), StaffSpaces(-0.5)).into()); // TODO: adjust x position
     }
 }
 
-fn draw_slur(ctx: &CanvasRenderingContext2d, font: &Font, start: Point<Pixels>, end: Point<Pixels>) {
+fn draw_tie(ctx: &CanvasRenderingContext2d, font: &Font, start: Point<Pixels>, end: Point<Pixels>) {
     let dx = end.x - start.x;
 
     let cp1 = Point::new(start.x + dx / 3.0, start.y + Pixels(25.0));

@@ -31,13 +31,9 @@ RhythmSegment: RhythmSegment = {
 }
 
 NoteDuration: NoteDuration =
-    <num:Number> <dot:"."?> =>? {
-        let dotted = dot.is_some();
-
-        Ok(NoteDuration {
-            kind: NoteDurationKind::from_number(num).ok_or(ParseError::User { error: RhythmError::InvalidNoteDuration(num) })?
-            // TODO: add dotted
-        })
-    };
+    <num:Number> <dot:"."?> =>? Ok(NoteDuration {
+        kind: NoteDurationKind::from_number(num).ok_or(ParseError::User { error: RhythmError::InvalidNoteDuration(num) })?,
+        dotted: dot.is_some(),
+    });
 
 Number: u32 = r"[0-9]+" => u32::from_str(<>).unwrap();

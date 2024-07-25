@@ -6,6 +6,7 @@ pub mod duration;
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct NoteDuration {
     pub kind: NoteDurationKind,
+    pub dotted: bool,
 }
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub enum NoteDurationKind {
@@ -24,7 +25,7 @@ pub enum NoteDurationKind {
 
 impl NoteDuration {
     pub fn to_duration(self) -> Duration {
-        Duration::WHOLE_NOTE * self.kind.to_ratio()
+        Duration::WHOLE_NOTE * self.kind.to_ratio() * if self.dotted { Ratio::new(3, 2) } else { Ratio::new(1, 1) }
     }
 }
 impl NoteDurationKind {
