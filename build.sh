@@ -1,1 +1,1 @@
-wasm-pack build --target web -d site/pkg --dev
+wasm-pack build --target web -d site/pkg --no-pack
