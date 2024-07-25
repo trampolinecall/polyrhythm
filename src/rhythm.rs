@@ -10,18 +10,22 @@ use num_rational::Ratio;
 // so for example, whole   notes have a duration of NoteDuration(0) because 2^0 = 1
 // so for example, half    notes have a duration of NoteDuration(1) because 2^1 = 2
 // so for example, quarter notes have a duration of NoteDuration(2) because 2^2 = 4
+// TODO: turn this into an enum, stop at 1024
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct NoteDuration(u32);
 
 impl NoteDuration {
-    const WHOLE: NoteDuration = NoteDuration(0);
-    const HALF: NoteDuration = NoteDuration(1);
-    const QUARTER: NoteDuration = NoteDuration(2);
-    const EIGTH: NoteDuration = NoteDuration(3);
-    const SIXTEENTH: NoteDuration = NoteDuration(4);
-    const THIRTYSECOND: NoteDuration = NoteDuration(5);
-    const SIXTYFOURTH: NoteDuration = NoteDuration(6);
-    const ONEHUNDREDTWENTYSECOND: NoteDuration = NoteDuration(7);
+    pub const WHOLE: NoteDuration = NoteDuration(0);
+    pub const HALF: NoteDuration = NoteDuration(1);
+    pub const QUARTER: NoteDuration = NoteDuration(2);
+    pub const EIGTH: NoteDuration = NoteDuration(3);
+    pub const SIXTEENTH: NoteDuration = NoteDuration(4);
+    pub const THIRTYSECOND: NoteDuration = NoteDuration(5);
+    pub const SIXTYFOURTH: NoteDuration = NoteDuration(6);
+    pub const ND128: NoteDuration = NoteDuration(7);
+    pub const ND256: NoteDuration = NoteDuration(8);
+    pub const ND512: NoteDuration = NoteDuration(9);
+    pub const ND1024: NoteDuration = NoteDuration(10);
 
     pub fn to_duration(self) -> Duration {
         Duration::WHOLE_NOTE * Ratio::new(1, 2u32.pow(self.0))
