@@ -1,7 +1,6 @@
-pub use duration::Duration;
 use num_rational::Ratio;
 
-pub mod duration;
+use crate::time::Duration;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct NoteDuration {

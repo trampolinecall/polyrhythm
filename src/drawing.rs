@@ -6,7 +6,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
     polyrhythm::{self, Polyrhythm},
-    rhythm::{NoteDuration, NoteDurationKind, Rhythm},
+    rhythm::{NoteDuration, NoteDurationKind, Rhythm}, time::Duration,
 };
 
 pub use drawing::Font;
@@ -207,13 +207,13 @@ fn draw_tie(ctx: &CanvasRenderingContext2d, font: &Font, start: Point<Pixels>, e
 }
 
 struct FlattenedNote {
-    time: Ratio<u32>,
+    time: Duration,
     is_rest: bool,
     duration: NoteDuration,
     tied_to_next: bool,
 }
 fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
-    let mut current_time = Ratio::ZERO;
+    let mut current_time = Duration::ZERO;
 
     let mut notes = Vec::new();
 
@@ -221,20 +221,20 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
         match segment {
             crate::rhythm::RhythmSegment::Note(dur) => {
                 notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur, tied_to_next: false });
-                current_time += segment.duration().to_ratio();
+                current_time += segment.duration();
             }
             crate::rhythm::RhythmSegment::TiedNote(durs) => {
                 let (last, firsts) = durs.split_last().expect("cannot have 0 notes in tied notes");
                 for dur in firsts {
                     notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *dur, tied_to_next: true });
-                    current_time += dur.to_duration().to_ratio();
+                    current_time += dur.to_duration();
                 }
                 notes.push(FlattenedNote { time: current_time, is_rest: false, duration: *last, tied_to_next: false });
-                current_time += last.to_duration().to_ratio();
+                current_time += last.to_duration();
             }
             crate::rhythm::RhythmSegment::Rest(dur) => {
                 notes.push(FlattenedNote { time: current_time, is_rest: true, duration: *dur, tied_to_next: false });
-                current_time += segment.duration().to_ratio();
+                current_time += segment.duration();
             }
             crate::rhythm::RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => {
                 for flattened_subnote in flatten_rhythm(rhythm).into_iter() {
@@ -245,7 +245,7 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
                         tied_to_next: flattened_subnote.tied_to_next,
                     })
                 }
-                current_time += segment.duration().to_ratio();
+                current_time += segment.duration();
             }
         }
     }
@@ -253,6 +253,6 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
     notes
 }
 
-fn time_to_x(time: Ratio<u32>) -> Pixels {
+fn time_to_x(time: Duration) -> Pixels {
     WHOLE_NOTE_WIDTH * time.to_f64().unwrap()
 }

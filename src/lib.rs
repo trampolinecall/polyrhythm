@@ -5,6 +5,7 @@ mod drawing;
 mod parse;
 mod polyrhythm;
 mod rhythm;
+mod time;
 
 #[wasm_bindgen(start)]
 pub async fn main() {
