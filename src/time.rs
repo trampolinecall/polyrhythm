@@ -36,7 +36,7 @@ impl Duration<WholeNotes> {
     pub const SIXTEENTH_NOTE: Duration<WholeNotes> = Duration(WholeNotes(Ratio::new_raw(1, 16)));
     pub const THIRTYSECOND_NOTE: Duration<WholeNotes> = Duration(WholeNotes(Ratio::new_raw(1, 32)));
     pub const SIXTYFOURTH_NOTE: Duration<WholeNotes> = Duration(WholeNotes(Ratio::new_raw(1, 64)));
-    pub const ONEHUNDREDTWENTYSECOND_NOTE: Duration<WholeNotes> = Duration(WholeNotes(Ratio::new_raw(1, 128)));
+    pub const ONEHUNDREDTWENTYEIGTH_DNOTE: Duration<WholeNotes> = Duration(WholeNotes(Ratio::new_raw(1, 128)));
 }
 
 impl<Unit: Add<Output = Unit>> Add<Duration<Unit>> for Duration<Unit> {
