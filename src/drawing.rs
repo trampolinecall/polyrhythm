@@ -1,5 +1,5 @@
 use num_rational::Ratio;
-use num_traits::ConstZero;
+use num_traits::{ConstZero, ToPrimitive};
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -54,7 +54,7 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
             draw_rhythm(&ctx, &layout_metrics, font, rhythm_i, approx);
 
             let approx_error = polyrhythm::score_error(polyrhythm.tempo, &line.original, approx);
-            drawing::fill_text(&ctx, font, &format!("error: {approx_error}"), layout_metrics.error_text_pos(rhythm_i));
+            drawing::fill_text(&ctx, font, &format!("error: {}s", approx_error.0.to_f64().unwrap()), layout_metrics.error_text_pos(rhythm_i));
 
             let approx_flattened = polyrhythm::flatten_rhythm(approx);
 
