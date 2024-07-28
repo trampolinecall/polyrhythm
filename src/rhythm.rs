@@ -1,6 +1,6 @@
 use num_rational::Ratio;
 
-use crate::time::Duration;
+use crate::{time::Duration, units::WholeNotes};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct NoteDuration {
@@ -23,12 +23,12 @@ pub enum NoteDurationKind {
 }
 
 impl NoteDuration {
-    pub fn to_duration(self) -> Duration {
-        Duration::WHOLE_NOTE * self.kind.to_ratio() * if self.dotted { Ratio::new(3, 2) } else { Ratio::new(1, 1) }
+    pub fn to_duration(self) -> Duration <WholeNotes>{
+        Duration::WHOLE_NOTE * self.kind.to_ratio().into() * if self.dotted { Ratio::new(3, 2) } else { Ratio::new(1, 1) }
     }
 }
 impl NoteDurationKind {
-    pub fn to_ratio(self) -> Ratio<u32> {
+    pub fn to_ratio(self) -> Ratio<i32> {
         match self {
             NoteDurationKind::Whole => Ratio::new(1, 1),
             NoteDurationKind::Half => Ratio::new(1, 2),
@@ -87,14 +87,14 @@ pub enum RhythmSegment {
 }
 
 pub struct TupletInnerDurationMismatch {
-    pub actual: Duration,
-    pub expected: Duration,
+    pub actual: Duration<WholeNotes>,
+    pub expected: Duration<WholeNotes>,
 }
 
 impl RhythmSegment {
     pub fn new_tuplet(actual: u32, normal: u32, note_duration: NoteDuration, rhythm: Rhythm) -> Result<RhythmSegment, TupletInnerDurationMismatch> {
         let actual_inner_duration = rhythm.duration();
-        let expected_inner_duration = note_duration.to_duration() * Ratio::from_integer(actual);
+        let expected_inner_duration = note_duration.to_duration() * Ratio::from_integer(actual as i32);
         if actual_inner_duration == expected_inner_duration {
             Ok(RhythmSegment::Tuplet { actual, normal, note_duration, rhythm: Box::new(rhythm), do_not_construct: DoNotConstruct(()) })
         } else {
@@ -102,18 +102,18 @@ impl RhythmSegment {
         }
     }
 
-    pub fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration <WholeNotes>{
         match self {
             RhythmSegment::Note(dur) => dur.to_duration(),
             RhythmSegment::TiedNote(durs) => durs.iter().copied().map(NoteDuration::to_duration).sum(),
             RhythmSegment::Rest(dur) => dur.to_duration(),
-            RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal),
+            RhythmSegment::Tuplet { actual: _, normal, note_duration, rhythm: _, do_not_construct: _ } => note_duration.to_duration() * Ratio::from_integer(*normal as i32),
         }
     }
 }
 
 impl Rhythm {
-    pub fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration<WholeNotes> {
         self.segments.iter().map(|s| s.duration()).sum()
     }
 }

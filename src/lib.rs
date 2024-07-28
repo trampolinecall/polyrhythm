@@ -6,6 +6,7 @@ mod parse;
 mod polyrhythm;
 mod rhythm;
 mod time;
+mod units;
 
 #[wasm_bindgen(start)]
 pub async fn main() {

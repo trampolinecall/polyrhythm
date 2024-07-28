@@ -1,4 +1,5 @@
 use num_rational::Ratio;
+use num_traits::ConstZero;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -6,7 +7,8 @@ use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
     polyrhythm::{self, Polyrhythm},
     rhythm::{NoteDuration, NoteDurationKind, Rhythm},
-    time::Duration,
+    time::Time,
+    units::WholeNotes,
 };
 
 pub use drawing::Font;
@@ -52,7 +54,7 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
             draw_rhythm(&ctx, &layout_metrics, font, rhythm_i, approx);
 
             let approx_error = polyrhythm::score_error(polyrhythm.tempo, &line.original, approx);
-            drawing::fill_text(&ctx, font, &format!("error: {approx_error}s"), layout_metrics.error_text_pos(rhythm_i));
+            drawing::fill_text(&ctx, font, &format!("error: {approx_error}"), layout_metrics.error_text_pos(rhythm_i));
 
             let approx_flattened = polyrhythm::flatten_rhythm(approx);
 
@@ -215,13 +217,13 @@ fn draw_tie(ctx: &CanvasRenderingContext2d, font: &Font, start: Point<Pixels>, e
 }
 
 struct FlattenedNote {
-    time: Duration,
+    time: Time<WholeNotes>,
     is_rest: bool,
     duration: NoteDuration,
     tied_to_next: bool,
 }
 fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
-    let mut current_time = Duration::ZERO;
+    let mut current_time = Time::ZERO;
 
     let mut notes = Vec::new();
 
@@ -247,7 +249,7 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
             crate::rhythm::RhythmSegment::Tuplet { actual, normal, note_duration: _, rhythm, do_not_construct: _ } => {
                 for flattened_subnote in flatten_rhythm(rhythm).into_iter() {
                     notes.push(FlattenedNote {
-                        time: flattened_subnote.time * Ratio::new(*normal, *actual) + current_time,
+                        time: flattened_subnote.time * Ratio::new(*normal as i32, *actual as i32) + current_time,
                         is_rest: flattened_subnote.is_rest,
                         duration: flattened_subnote.duration,
                         tied_to_next: flattened_subnote.tied_to_next,
