@@ -35,7 +35,9 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
     canvas.set_height(500);
     ctx.clear_rect(0.0, 0.0, 1000.0, 500.0);
 
-    let mut y = RHYTHM_HEIGHT / 2.0;
+    draw_tempo(&ctx, font, polyrhythm.tempo);
+
+    let mut y = RHYTHM_HEIGHT * 1.5;
     if let Some(pulse) = &polyrhythm.pulse {
         draw_rhythm(&ctx, font, y, pulse);
         draw_pulse(&ctx, pulse);
@@ -53,8 +55,8 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
         for approx in &line.approximations {
             draw_rhythm(&ctx, font, y, approx);
 
-            let approx_error = polyrhythm::score_error(&line.original, approx);
-            drawing::fill_text(&ctx, font, &format!("error: {approx_error}"), Point::new(Pixels(0.0), y));
+            let approx_error = polyrhythm::score_error(polyrhythm.tempo, &line.original, approx);
+            drawing::fill_text(&ctx, font, &format!("error: {approx_error}s"), Point::new(Pixels(0.0), y));
 
             let approx_flattened = polyrhythm::flatten_rhythm(approx);
 
@@ -65,6 +67,30 @@ pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
             y += RHYTHM_HEIGHT;
         }
     }
+}
+
+fn draw_tempo(ctx: &CanvasRenderingContext2d, font: &Font, (dur, bpm): (NoteDuration, u32)) {
+    let mut dur_sym = match dur.kind {
+        NoteDurationKind::Whole => smufl::Glyph::MetNoteWhole,
+        NoteDurationKind::Half => smufl::Glyph::MetNoteHalfUp,
+        NoteDurationKind::Quarter => smufl::Glyph::MetNoteQuarterUp,
+        NoteDurationKind::Eigth => smufl::Glyph::MetNote8thUp,
+        NoteDurationKind::Sixteenth => smufl::Glyph::MetNote16thUp,
+        NoteDurationKind::Nd32 => smufl::Glyph::MetNote32ndUp,
+        NoteDurationKind::Nd64 => smufl::Glyph::MetNote64thUp,
+        NoteDurationKind::Nd128 => smufl::Glyph::MetNote128thUp,
+        NoteDurationKind::Nd256 => smufl::Glyph::MetNote256thUp,
+        NoteDurationKind::Nd512 => smufl::Glyph::MetNote512thUp,
+        NoteDurationKind::Nd1024 => smufl::Glyph::MetNote1024thUp,
+    }
+    .codepoint()
+    .to_string();
+
+    if dur.dotted {
+        dur_sym.push(smufl::Glyph::MetAugmentationDot.codepoint())
+    }
+
+    drawing::fill_text(ctx, font, &format!("{} = {}", dur_sym, bpm), Point::new(Pixels(0.0), RHYTHM_HEIGHT));
 }
 
 fn draw_rhythm(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels, rhythm: &Rhythm) {

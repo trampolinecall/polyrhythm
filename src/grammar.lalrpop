@@ -13,8 +13,9 @@ extern {
 }
 
 pub Polyrhythm: Polyrhythm =
-    <pulse:("pulse" <Rhythm> ";")?>
-    <rhythms:RhythmLine+> => Polyrhythm { pulse, rhythms };
+    <tempo: ("tempo" <NoteDuration> "=" <Number> ";")>
+    <pulse: ("pulse" <Rhythm> ";")?>
+    <rhythms: RhythmLine+> => Polyrhythm { tempo, pulse, rhythms };
 
 RhythmLine: RhythmLine =
     <original: Rhythm> <approx:("approx" <Rhythm>)*> ";" => RhythmLine { original, approximations: approx };
