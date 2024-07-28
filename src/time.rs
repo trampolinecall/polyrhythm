@@ -10,10 +10,10 @@ use num_rational::Ratio;
 use crate::rhythm::NoteDuration;
 
 // durations are expressed in terms of whole notes
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Duration(Ratio<u32>);
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
 pub struct Seconds(Ratio<u32>);
 
 impl Duration {

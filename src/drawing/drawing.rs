@@ -1,6 +1,6 @@
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::CanvasRenderingContext2d;
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 use crate::drawing::{
     coord::{Pixels, Point},
@@ -26,6 +26,12 @@ impl Font {
     }
 }
 
+pub fn set_canvas_size_and_clear(canvas: &HtmlCanvasElement, ctx: &CanvasRenderingContext2d, width: Pixels, height: Pixels) {
+    canvas.set_width(width.0 as u32);
+    canvas.set_height(height.0 as u32);
+    ctx.clear_rect(0.0, 0.0, width.0, height.0);
+}
+
 pub fn line(ctx: &CanvasRenderingContext2d, p1: Point<Pixels>, p2: Point<Pixels>, color: &str, thickness: Pixels) {
     ctx.set_stroke_style(&color.into());
     ctx.set_line_width(thickness.0);
@@ -42,7 +48,7 @@ pub fn fill_text(ctx: &CanvasRenderingContext2d, font: &Font, text: &str, pos: P
     ctx.fill_text(text, pos.x.0, pos.y.0).unwrap()
 }
 pub fn draw_glyph(ctx: &CanvasRenderingContext2d, font: &Font, glyph: smufl::Glyph, pos: Point<Pixels>) {
-    fill_text(ctx, font, &glyph.codepoint().to_string(), pos)
+    fill_text(ctx, font, &glyph.codepoint().to_string(), pos,)
 }
 
 pub fn bezier(ctx: &CanvasRenderingContext2d, start: Point<Pixels>, cp1: Point<Pixels>, cp2: Point<Pixels>, end: Point<Pixels>, color: &str, thickness: Pixels) {

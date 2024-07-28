@@ -1,5 +1,4 @@
 use num_rational::Ratio;
-use num_traits::cast::ToPrimitive;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
@@ -15,11 +14,8 @@ pub use drawing::Font;
 mod coord;
 #[allow(clippy::module_inception)]
 mod drawing;
+mod layout;
 
-// TODO: do this better (scale so that the shortest note is a comfortable distance from the next?)
-const WHOLE_NOTE_WIDTH: Pixels = Pixels(500.0);
-// TODO: decide on a better value for this (make this vary between each rhythm based on the highest number of flags on the shortest note?)
-const RHYTHM_HEIGHT: Pixels = Pixels(100.0);
 const STAFF_HEIGHT: Pixels = Pixels(STAFF_SPACE_PIXELS.0 * 4.0);
 
 const DEFAULT_STAFF_LINE_THICKNESS: StaffSpaces = StaffSpaces(1.0 / 8.0);
@@ -31,46 +27,51 @@ const DEFAULT_CORRESPONDENCE_LINE_THICKNESS: StaffSpaces = StaffSpaces(2.0 / 25.
 pub fn draw(canvas: &HtmlCanvasElement, font: &Font, polyrhythm: &Polyrhythm) {
     let ctx: CanvasRenderingContext2d = canvas.get_context("2d").expect("could not get canvas context").unwrap().dyn_into().expect("2d canvas context should be CanvasRenderingContext2d");
 
-    // TODO: adjust this
-    canvas.set_width(1000);
-    canvas.set_height(500);
-    ctx.clear_rect(0.0, 0.0, 1000.0, 500.0);
+    let layout_metrics = layout::LayoutMetrics::calculate(polyrhythm);
 
-    draw_tempo(&ctx, font, polyrhythm.tempo);
+    drawing::set_canvas_size_and_clear(canvas, &ctx, layout_metrics.canvas_width(), layout_metrics.canvas_height());
 
-    let mut y = RHYTHM_HEIGHT * 1.5;
+    draw_tempo(&ctx, &layout_metrics, font, polyrhythm.tempo);
+
+    let mut rhythm_i = 0;
     if let Some(pulse) = &polyrhythm.pulse {
-        draw_rhythm(&ctx, font, y, pulse);
-        draw_pulse(&ctx, pulse);
-        y += RHYTHM_HEIGHT;
+        draw_rhythm(&ctx, &layout_metrics, font, rhythm_i, pulse);
+        draw_pulse(&ctx, &layout_metrics, pulse);
+        rhythm_i += 1;
     }
 
     for line in polyrhythm.rhythms.iter() {
         let original_flattened = polyrhythm::flatten_rhythm(&line.original);
-        let original_y = y;
+        let original_i = rhythm_i;
 
-        draw_rhythm(&ctx, font, y, &line.original);
+        draw_rhythm(&ctx, &layout_metrics, font, rhythm_i, &line.original);
 
-        y += RHYTHM_HEIGHT;
+        rhythm_i += 1;
 
         for approx in &line.approximations {
-            draw_rhythm(&ctx, font, y, approx);
+            draw_rhythm(&ctx, &layout_metrics, font, rhythm_i, approx);
 
             let approx_error = polyrhythm::score_error(polyrhythm.tempo, &line.original, approx);
-            drawing::fill_text(&ctx, font, &format!("error: {approx_error}s"), Point::new(Pixels(0.0), y));
+            drawing::fill_text(&ctx, font, &format!("error: {approx_error}s"), layout_metrics.error_text_pos(rhythm_i));
 
             let approx_flattened = polyrhythm::flatten_rhythm(approx);
 
             for (original_ev, approx_ev) in original_flattened.iter().zip(approx_flattened) {
-                drawing::line(&ctx, Point::new(time_to_x(original_ev.time), original_y), Point::new(time_to_x(approx_ev.time), y), "grey", DEFAULT_CORRESPONDENCE_LINE_THICKNESS.into());
+                drawing::line(
+                    &ctx,
+                    layout_metrics.note_position(original_ev.time, original_i),
+                    layout_metrics.note_position(approx_ev.time, rhythm_i),
+                    "grey",
+                    DEFAULT_CORRESPONDENCE_LINE_THICKNESS.into(),
+                );
             }
 
-            y += RHYTHM_HEIGHT;
+            rhythm_i += 1;
         }
     }
 }
 
-fn draw_tempo(ctx: &CanvasRenderingContext2d, font: &Font, (dur, bpm): (NoteDuration, u32)) {
+fn draw_tempo(ctx: &CanvasRenderingContext2d, layout_metrics: &layout::LayoutMetrics, font: &Font, (dur, bpm): (NoteDuration, u32)) {
     let mut dur_sym = match dur.kind {
         NoteDurationKind::Whole => smufl::Glyph::MetNoteWhole,
         NoteDurationKind::Half => smufl::Glyph::MetNoteHalfUp,
@@ -91,14 +92,13 @@ fn draw_tempo(ctx: &CanvasRenderingContext2d, font: &Font, (dur, bpm): (NoteDura
         dur_sym.push(smufl::Glyph::MetAugmentationDot.codepoint())
     }
 
-    drawing::fill_text(ctx, font, &format!("{} = {}", dur_sym, bpm), Point::new(Pixels(0.0), RHYTHM_HEIGHT));
+    drawing::fill_text(ctx, font, &format!("{} = {}", dur_sym, bpm), layout_metrics.tempo_marking_pos());
 }
 
-fn draw_rhythm(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels, rhythm: &Rhythm) {
-    draw_staff_line(ctx, font, y);
+fn draw_rhythm(ctx: &CanvasRenderingContext2d, layout_metrics: &layout::LayoutMetrics, font: &Font, rhythm_index: usize, rhythm: &Rhythm) {
+    draw_staff_line(ctx, layout_metrics, font, rhythm_index);
     for note in flatten_rhythm(rhythm) {
-        let x = time_to_x(note.time);
-        let note_pos = Point::new(x, y);
+        let note_pos = layout_metrics.note_position(note.time, rhythm_index);
         if note.is_rest {
             draw_rest(ctx, font, note.duration, note_pos);
         } else {
@@ -107,15 +107,22 @@ fn draw_rhythm(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels, rhythm: &
     }
 }
 
-fn draw_pulse(ctx: &CanvasRenderingContext2d, pulse: &Rhythm) {
+fn draw_pulse(ctx: &CanvasRenderingContext2d, layout_metrics: &layout::LayoutMetrics, pulse: &Rhythm) {
     for note in flatten_rhythm(pulse) {
-        let x = WHOLE_NOTE_WIDTH * note.time.to_f64().unwrap();
+        let x = layout_metrics.time_to_x(note.time);
         drawing::line(ctx, Point::new(x, Pixels(0.0)), Point::new(x, Pixels(500.0)), "grey", DEFAULT_BEAT_LINE_THICKNESS.into())
     }
 }
 
-fn draw_staff_line(ctx: &CanvasRenderingContext2d, font: &Font, y: Pixels) {
-    drawing::line(ctx, Point::new(Pixels(0.0), y), Point::new(Pixels(1000.0), y), "black", font.metadata.engraving_defaults.staff_line_thickness.unwrap_or(DEFAULT_STAFF_LINE_THICKNESS).into());
+fn draw_staff_line(ctx: &CanvasRenderingContext2d, layout_metrics: &layout::LayoutMetrics, font: &Font, rhythm_index: usize) {
+    let y = layout_metrics.rhythm_index_to_y(rhythm_index);
+    drawing::line(
+        ctx,
+        Point::new(Pixels(0.0), y),
+        Point::new(layout_metrics.canvas_width(), y),
+        "black",
+        font.metadata.engraving_defaults.staff_line_thickness.unwrap_or(DEFAULT_STAFF_LINE_THICKNESS).into(),
+    );
 }
 
 fn draw_rest(ctx: &CanvasRenderingContext2d, font: &Font, duration: NoteDuration, pos: Point<Pixels>) {
@@ -252,8 +259,4 @@ fn flatten_rhythm(r: &Rhythm) -> Vec<FlattenedNote> {
     }
 
     notes
-}
-
-fn time_to_x(time: Duration) -> Pixels {
-    WHOLE_NOTE_WIDTH * time.to_f64().unwrap()
 }

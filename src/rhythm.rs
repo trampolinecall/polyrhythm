@@ -113,7 +113,7 @@ impl RhythmSegment {
 }
 
 impl Rhythm {
-    fn duration(&self) -> Duration {
+    pub fn duration(&self) -> Duration {
         self.segments.iter().map(|s| s.duration()).sum()
     }
 }
