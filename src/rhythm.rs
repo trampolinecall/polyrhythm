@@ -23,7 +23,7 @@ pub enum NoteDurationKind {
 }
 
 impl NoteDuration {
-    pub fn to_duration(self) -> Duration <WholeNotes>{
+    pub fn to_duration(self) -> Duration<WholeNotes> {
         Duration::WHOLE_NOTE * self.kind.to_ratio().into() * if self.dotted { Ratio::new(3, 2) } else { Ratio::new(1, 1) }
     }
 }
@@ -102,7 +102,7 @@ impl RhythmSegment {
         }
     }
 
-    pub fn duration(&self) -> Duration <WholeNotes>{
+    pub fn duration(&self) -> Duration<WholeNotes> {
         match self {
             RhythmSegment::Note(dur) => dur.to_duration(),
             RhythmSegment::TiedNote(durs) => durs.iter().copied().map(NoteDuration::to_duration).sum(),

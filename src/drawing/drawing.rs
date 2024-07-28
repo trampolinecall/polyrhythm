@@ -48,7 +48,7 @@ pub fn fill_text(ctx: &CanvasRenderingContext2d, font: &Font, text: &str, pos: P
     ctx.fill_text(text, pos.x.0, pos.y.0).unwrap()
 }
 pub fn draw_glyph(ctx: &CanvasRenderingContext2d, font: &Font, glyph: smufl::Glyph, pos: Point<Pixels>) {
-    fill_text(ctx, font, &glyph.codepoint().to_string(), pos,)
+    fill_text(ctx, font, &glyph.codepoint().to_string(), pos)
 }
 
 pub fn bezier(ctx: &CanvasRenderingContext2d, start: Point<Pixels>, cp1: Point<Pixels>, cp2: Point<Pixels>, end: Point<Pixels>, color: &str, thickness: Pixels) {

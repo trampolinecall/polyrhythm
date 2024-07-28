@@ -2,7 +2,8 @@ use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point},
     polyrhythm::Polyrhythm,
     rhythm::Rhythm,
-    time::{Duration, Time}, units::WholeNotes,
+    time::{Duration, Time},
+    units::WholeNotes,
 };
 use num_rational::Ratio;
 use num_traits::ToPrimitive;
@@ -56,14 +57,14 @@ impl LayoutMetrics {
             let all_durations = all_rhythms.clone().flat_map(flatten_rhythm_to_durations);
             let shortest_duration = all_durations.min().unwrap_or(Duration::WHOLE_NOTE); // just an arbitrary default duration in case there are no notes
 
-            MIN_NOTE_SPACING / shortest_duration.0.0.to_f64().unwrap()
+            MIN_NOTE_SPACING / shortest_duration.0 .0.to_f64().unwrap()
         };
 
         let longest_rhythm = all_rhythms.clone().map(|rhy| rhy.duration()).max().unwrap_or(Duration::WHOLE_NOTE); // also another arbitrary default
-        let canvas_width = whole_note_width * longest_rhythm.0.0.to_f64().unwrap() + ERROR_DISPLAY_WIDTH;
+        let canvas_width = whole_note_width * longest_rhythm.0 .0.to_f64().unwrap() + ERROR_DISPLAY_WIDTH;
         let canvas_height = rhythm_height * (all_rhythms.count() + 1) as f64 + TEMPO_MARKING_HEIGHT;
 
-        let error_text_x = whole_note_width * longest_rhythm.0.0.to_f64().unwrap();
+        let error_text_x = whole_note_width * longest_rhythm.0 .0.to_f64().unwrap();
 
         LayoutMetrics { canvas_width, canvas_height, error_text_x, whole_note_width, rhythm_height }
     }
@@ -77,7 +78,7 @@ impl LayoutMetrics {
     }
 
     pub fn time_to_x(&self, time: Time<WholeNotes>) -> Pixels {
-        self.whole_note_width * time.0.0.to_f64().unwrap()
+        self.whole_note_width * time.0 .0.to_f64().unwrap()
     }
 
     pub fn rhythm_index_to_y(&self, index: usize) -> Pixels {
