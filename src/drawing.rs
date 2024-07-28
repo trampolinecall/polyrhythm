@@ -6,7 +6,8 @@ use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 use crate::{
     drawing::coord::{pixel::STAFF_SPACE_PIXELS, Pixels, Point, StaffSpaces},
     polyrhythm::{self, Polyrhythm},
-    rhythm::{NoteDuration, NoteDurationKind, Rhythm}, time::Duration,
+    rhythm::{NoteDuration, NoteDurationKind, Rhythm},
+    time::Duration,
 };
 
 pub use drawing::Font;
