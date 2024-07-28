@@ -1,5 +1,6 @@
 use crate::{
-    rhythm::{NoteDuration, Rhythm}, time::Duration,
+    rhythm::{NoteDuration, Rhythm},
+    time::Duration,
 };
 use num_rational::Ratio;
 use num_traits::ToPrimitive;
@@ -23,7 +24,7 @@ pub fn score_error(tempo: (NoteDuration, u32), original: &Rhythm, approx: &Rhyth
         .iter()
         .zip(a.iter())
         .map(|(o_ev, a_ev)| {
-            let mut diff = (o_ev.time.to_seconds(tempo) - a_ev.time.to_seconds(tempo)).to_f64().unwrap().abs();
+            let mut diff = (o_ev.time.to_seconds(tempo).to_f64().unwrap() - a_ev.time.to_seconds(tempo).to_f64().unwrap()).abs();
             if o_ev.kind != a_ev.kind {
                 diff += 10.0;
                 diff *= 50.0;
