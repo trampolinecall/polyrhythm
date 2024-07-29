@@ -7,6 +7,7 @@ use crate::{
 };
 use num_rational::Ratio;
 use num_traits::ToPrimitive;
+use smufl::StaffSpaces;
 
 pub struct LayoutMetrics {
     canvas_width: Pixels,
@@ -17,7 +18,7 @@ pub struct LayoutMetrics {
     rhythm_height: Pixels,
 }
 
-const MIN_NOTE_SPACING: Pixels = Pixels(30.0);
+const MIN_NOTE_SPACING: StaffSpaces = StaffSpaces(3.0);
 const ERROR_DISPLAY_WIDTH: Pixels = Pixels(300.0);
 const TEMPO_MARKING_HEIGHT: Pixels = Pixels(80.0);
 
@@ -57,7 +58,7 @@ impl LayoutMetrics {
             let all_durations = all_rhythms.clone().flat_map(flatten_rhythm_to_durations);
             let shortest_duration = all_durations.min().unwrap_or(Duration::WHOLE_NOTE); // just an arbitrary default duration in case there are no notes
 
-            MIN_NOTE_SPACING / shortest_duration.0 .0.to_f64().unwrap()
+            Pixels::from(MIN_NOTE_SPACING) / shortest_duration.0 .0.to_f64().unwrap()
         };
 
         let longest_rhythm = all_rhythms.clone().map(|rhy| rhy.duration()).max().unwrap_or(Duration::WHOLE_NOTE); // also another arbitrary default
